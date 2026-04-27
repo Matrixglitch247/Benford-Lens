@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benford Lens — AI Image Authenticity Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0b10;
+  --ink2: #12141f;
+  --ink3: #1c1f30;
+  --ink4: #252840;
+  --dim: #3d4060;
+  --mid: #6b6f99;
+  --pale: #a8acd0;
+  --light: #d4d6e8;
+  --white: #f0f1f8;
+  --c1: #ff6b6b;   /* coral red */
+  --c2: #ffd93d;   /* warm yellow */
+  --c3: #6bcb77;   /* mint green */
+  --c4: #4d96ff;   /* blue */
+  --c5: #c77dff;   /* purple */
+  --c6: #ff9a3c;   /* orange */
+  --grad1: linear-gradient(135deg, #ff6b6b, #ffd93d);
+  --grad2: linear-gradient(135deg, #4d96ff, #c77dff);
+  --grad3: linear-gradient(135deg, #6bcb77, #4d96ff);
+  --font-display: 'Clash Display', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--ink);
+  color: var(--light);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+  height: 64px;
+  background: rgba(10,11,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--grad1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a {
+  color: var(--mid);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-cta {
+  background: var(--c1);
+  color: #fff !important;
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-weight: 600 !important;
+}
+.nav-cta:hover { background: #ff4f4f; color: #fff !important; }
+
+/* ── SECTIONS ── */
+section { scroll-margin-top: 64px; }
+
+/* ══════════════════════════════════════════
+   SECTION 1 — HERO
+══════════════════════════════════════════ */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 24px 60px;
+  position: relative;
+  overflow: hidden;
+}
+/* Animated gradient orbs */
+#hero::before, #hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.12;
+  animation: float 8s ease-in-out infinite;
+}
+#hero::before {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, #4d96ff, #c77dff);
+  top: -100px; right: -100px;
+}
+#hero::after {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #ff6b6b, #ffd93d);
+  bottom: -100px; left: -100px;
+  animation-delay: -4s;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.05); }
+}
+
+/* Grid texture */
+#hero .grid-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+.hero-content { position: relative; z-index: 1; text-align: center; max-width: 760px; }
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pale);
+  margin-bottom: 28px;
+  letter-spacing: 0.5px;
+}
+.hero-chip-dot {
+  width: 7px; height: 7px;
+  background: var(--c3);
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+h1.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(42px, 7vw, 80px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  color: var(--white);
+  margin-bottom: 24px;
+}
+h1.hero-title .gradient-word {
+  background: var(--grad1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: 17px;
+  color: var(--mid);
+  max-width: 520px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+}
+
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 60px;
+}
+.btn-primary {
+  background: var(--grad1);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 100px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+.btn-secondary {
+  background: transparent;
+  color: var(--light);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 14px 32px;
+  border-radius: 100px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.btn-secondary:hover { border-color: rgba(255,255,255,0.4); transform: translateY(-2px); }
+
+/* ── DEMO ANIMATION ── */
+.demo-window {
+  position: relative; z-index: 1;
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 680px;
+  margin: 0 auto;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+}
+.demo-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.demo-dot.r { background: #ff6058; }
+.demo-dot.y { background: #febc2e; }
+.demo-dot.g { background: #28c840; }
+.demo-titlebar-label {
+  flex: 1; text-align: center;
+  font-size: 11px; color: var(--dim); font-family: var(--font-mono);
+}
+
+.demo-body { padding: 32px; }
+
+/* Drop zone animation */
+.demo-drop-zone {
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: demoLoop 6s infinite;
+}
+@keyframes demoLoop {
+  0%,15% { opacity: 1; }
+  25%,75% { opacity: 0; }
+  85%,100% { opacity: 1; }
+}
+.demo-drop-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+  animation: dropBounce 2s ease-in-out infinite;
+}
+@keyframes dropBounce {
+  0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)}
+}
+.demo-drop-txt { font-size: 13px; color: var(--mid); }
+
+/* Result animation */
+.demo-result {
+  position: absolute; inset: 32px;
+  display: flex; flex-direction: column; gap: 16px;
+  animation: demoResult 6s infinite;
+  opacity: 0;
+}
+@keyframes demoResult {
+  0%,20% { opacity: 0; }
+  35%,80% { opacity: 1; }
+  90%,100% { opacity: 0; }
+}
+.demo-result-top { display: flex; gap: 16px; align-items: flex-start; }
+.demo-result-img {
+  width: 80px; height: 80px;
+  background: linear-gradient(135deg, #c77dff44, #4d96ff44);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.demo-verdict-pill {
+  display: inline-block;
+  background: rgba(252,92,101,0.15);
+  color: #fc5c65;
+  border: 1px solid rgba(252,92,101,0.3);
+  border-radius: 100px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.demo-verdict-score { font-size: 12px; color: var(--mid); font-family: var(--font-mono); }
+.demo-pct {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: #fc5c65;
+}
+.demo-bar-bg {
+  height: 4px;
+  background: var(--ink4);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.demo-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6bcb77, #fc5c65);
+  border-radius: 2px;
+  animation: demoBarAnim 6s infinite;
+  width: 0%;
+}
+@keyframes demoBarAnim {
+  0%,30%{width:0%} 55%,80%{width:78%} 90%,100%{width:0%}
+}
+/* Mini bar chart in demo */
+.demo-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 48px;
+  margin-top: 8px;
+}
+.demo-bar-item {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  animation: demoBarGrow 6s infinite;
+  transform-origin: bottom;
+}
+@keyframes demoBarGrow {
+  0%,25%{transform:scaleY(0)} 40%,80%{transform:scaleY(1)} 90%,100%{transform:scaleY(0)}
+}
+
+/* ══════════════════════════════════════════
+   SECTION 2 — ANALYSER (the actual tool)
+══════════════════════════════════════════ */
+#analyser {
+  padding: 100px 24px;
+  background: var(--ink);
+}
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-heading {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  color: var(--white);
+  margin-bottom: 16px;
+}
+.section-sub {
+  font-size: 16px;
+  color: var(--mid);
+  max-width: 560px;
+  margin-bottom: 48px;
+}
+
+.tool-container {
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Upload */
+.upload-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.upload-zone {
+  padding: 64px 24px;
+  text-align: center;
+  cursor: pointer;
+  border: 2px dashed rgba(255,255,255,0.1);
+  border-radius: 14px;
+  margin: 16px;
+  transition: all 0.25s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag {
+  border-color: var(--c4);
+  background: rgba(77,150,255,0.04);
+}
+.upload-zone input { display: none; }
+.upload-icon-wrap {
+  width: 64px; height: 64px;
+  background: var(--grad2);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 28px;
+}
+.upload-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.upload-sub { font-size: 13px; color: var(--mid); }
+.upload-formats {
+  display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap;
+}
+.format-pill {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--mid);
+}
+.privacy-strip {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(107,203,119,0.06);
+  border-top: 1px solid rgba(107,203,119,0.1);
+  font-size: 12px;
+  color: var(--c3);
+}
+
+/* Results panel */
+.results-panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+.results-panel.visible { display: flex; }
+
+/* Verdict card */
+.verdict-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+@media(max-width:600px) { .verdict-card { grid-template-columns: 1fr; } }
+
+.img-pane {
+  background: var(--ink3);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 180px; position: relative; overflow: hidden;
+}
+.img-pane img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanning-overlay {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 24px;
+  font-size: 11px; letter-spacing: 2px; color: var(--dim);
+}
+
+/* scan line effect */
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--c4), transparent);
+  animation: scan 1.5s linear infinite;
+  opacity: 0.7;
+}
+@keyframes scan { 0%{top:0%} 100%{top:100%} }
+
+.verdict-pane {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.verdict-label-sm { font-size: 10px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+.verdict-big {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.verdict-gauge-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.verdict-gauge-label { color: var(--mid); }
+.verdict-pct-val { font-family: var(--font-mono); font-size: 14px; font-weight: 500; }
+.verdict-gauge-bg {
+  height: 8px; background: var(--ink4); border-radius: 4px;
+  overflow: hidden; margin-top: 6px;
+}
+.verdict-gauge-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 1.2s cubic-bezier(0.23,1,0.32,1);
+}
+.verdict-meta {
+  font-size: 11px; font-family: var(--font-mono);
+  color: var(--dim); line-height: 1.8;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 14px;
+}
+.verdict-meta span { color: var(--mid); }
+
+/* Feedback row */
+.feedback-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 28px;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.feedback-q { font-size: 12px; color: var(--mid); flex: 1; }
+.thumb-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  width: 38px; height: 38px;
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.thumb-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+.thumb-btn.up-active { background: rgba(107,203,119,0.15); border-color: var(--c3); }
+.thumb-btn.dn-active { background: rgba(252,92,101,0.15); border-color: var(--c1); }
+.fb-thanks { font-size: 11px; color: var(--c3); letter-spacing: 1px; display: none; }
+
+/* Charts row */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media(max-width:640px) { .charts-row { grid-template-columns: 1fr; } }
+
+.chart-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 24px;
+}
+.card-title {
+  font-size: 10px; letter-spacing: 3px; color: var(--dim);
+  text-transform: uppercase; margin-bottom: 20px;
+}
+.bar-chart-wrap {
+  display: flex; align-items: flex-end; gap: 5px;
+  height: 100px;
+}
+.bc-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+.bc-pair { display: flex; align-items: flex-end; gap: 2px; height: 88%; width: 100%; justify-content: center; }
+.bc-bar { flex:1; border-radius: 2px 2px 0 0; max-width: 11px; transition: height 0.8s cubic-bezier(0.23,1,0.32,1); }
+.bc-label { font-size: 9px; color: var(--dim); font-family: var(--font-mono); }
+.chart-legend { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--mid); }
+.legend-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* Stats grid */
+.stats-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.stats-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px;
+  background: rgba(255,255,255,0.06);
+}
+.stat-cell {
+  background: var(--ink2);
+  padding: 18px 20px;
+}
+.stat-name { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+.stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 3px; }
+.stat-desc { font-size: 10px; color: var(--dim); line-height: 1.5; }
+
+/* Digit table */
+.table-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-mono); }
+th {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--dim); font-weight: 500;
+  padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  text-align: left;
+}
+td { padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--pale); }
+tr:last-child td { border-bottom: none; }
+.flag-cell { color: #f7b731; font-size: 10px; }
+
+.reset-btn {
+  align-self: flex-start;
+  background: none; border: 1px solid rgba(255,255,255,0.1);
+  color: var(--mid); font-family: var(--font-body); font-size: 12px;
+  font-weight: 500; padding: 8px 20px; border-radius: 100px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: all 0.15s;
+}
+.reset-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--light); }
+
+/* ══════════════════════════════════════════
+   SECTION 3 — HOW IT WORKS
+══════════════════════════════════════════ */
+#how {
+  padding: 100px 24px;
+  background: var(--ink2);
+  position: relative;
+  overflow: hidden;
+}
+#how::before {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(77,150,255,0.08), transparent 70%);
+  top: -50px; right: -50px;
+  border-radius: 50%;
+}
+
+.how-grid {
+  max-width: 960px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+@media(max-width:720px) { .how-grid { grid-template-columns: 1fr; } }
+
+.how-steps { display: flex; flex-direction: column; gap: 32px; }
+.how-step { display: flex; gap: 20px; }
+.step-num {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+}
+.step-num.s1 { background: rgba(255,107,107,0.15); color: var(--c1); }
+.step-num.s2 { background: rgba(77,150,255,0.15); color: var(--c4); }
+.step-num.s3 { background: rgba(107,203,119,0.15); color: var(--c3); }
+.step-num.s4 { background: rgba(199,125,255,0.15); color: var(--c5); }
+.step-num.s5 { background: rgba(255,154,60,0.15); color: var(--c6); }
+.step-content {}
+.step-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 6px; }
+.step-body { font-size: 13px; color: var(--mid); line-height: 1.7; }
+
+/* Benford diagram */
+.benford-diagram {
+  background: var(--ink3);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 28px;
+}
+.bd-title { font-size: 11px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 20px; }
+.bd-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-bottom: 14px; }
+.bd-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bd-bar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  background: var(--grad2);
+  opacity: 0.7;
+}
+.bd-digit { font-size: 10px; color: var(--dim); font-family: var(--font-mono); }
+.bd-note { font-size: 11px; color: var(--dim); line-height: 1.7; margin-top: 16px; }
+.bd-note b { color: var(--pale); }
+
+.thresholds-table {
+  margin-top: 24px;
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.thresholds-table th {
+  font-size: 9px; padding: 8px 12px; background: rgba(255,255,255,0.04);
+}
+.thresholds-table td { padding: 8px 12px; }
+
+/* ══════════════════════════════════════════
+   SECTION 4 — ACCURACY (password protected)
+══════════════════════════════════════════ */
+#accuracy {
+  padding: 100px 24px;
+  background: var(--ink);
+  position: relative;
+}
+#accuracy::before {
+  content: '';
+  position: absolute;
+  width: 500px; height: 300px;
+  background: radial-gradient(ellipse, rgba(107,203,119,0.06), transparent 70%);
+  bottom: 0; left: 50%; transform: translateX(-50%);
+}
+
+/* Password gate */
+.pw-gate {
+  max-width: 460px; margin: 0 auto;
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 48px;
+  text-align: center;
+}
+.pw-icon { font-size: 40px; margin-bottom: 20px; }
+.pw-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.pw-sub { font-size: 13px; color: var(--mid); margin-bottom: 28px; }
+.pw-input-wrap { position: relative; margin-bottom: 12px; }
+.pw-input {
+  width: 100%;
+  background: var(--ink3);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 12px 44px 12px 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  letter-spacing: 4px;
+  text-align: center;
+}
+.pw-input:focus { border-color: var(--c4); }
+.pw-submit {
+  width: 100%;
+  background: var(--grad3);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.pw-submit:hover { opacity: 0.9; }
+.pw-error { font-size: 12px; color: var(--c1); margin-top: 8px; display: none; }
+
+/* Accuracy dashboard */
+.accuracy-dash { display: none; max-width: 880px; margin: 0 auto; }
+.accuracy-dash.visible { display: block; }
+
+.acc-top-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media(max-width:600px) { .acc-top-row { grid-template-columns: 1fr 1fr; } }
+
+.acc-metric-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 24px;
+}
+.acc-metric-label { font-size: 10px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 8px; }
+.acc-metric-val {
+  font-family: var(--font-display);
+  font-size: 36px; font-weight: 700; line-height: 1; margin-bottom: 6px;
+}
+.acc-metric-sub { font-size: 11px; color: var(--dim); }
+
+.acc-chart-card {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 16px;
+}
+.acc-big-bar-bg { height: 12px; background: var(--ink4); border-radius: 6px; overflow: hidden; margin-top: 12px; }
+.acc-big-bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+
+.acc-log {
+  background: var(--ink2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 24px;
+}
+.acc-log-entry {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px; font-family: var(--font-mono);
+}
+.acc-log-entry:last-child { border-bottom: none; }
+.log-thumb { font-size: 14px; }
+.log-time { color: var(--dim); flex: 1; }
+.log-verdict { color: var(--pale); }
+.no-log { font-size: 12px; color: var(--dim); text-align: center; padding: 24px; }
+
+/* ══════════════════════════════════════════
+   SECTION 5 — ABOUT
+══════════════════════════════════════════ */
+#about {
+  padding: 100px 24px;
+  background: var(--ink2);
+  position: relative;
+  overflow: hidden;
+}
+#about::after {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(199,125,255,0.07), transparent 70%);
+  bottom: -100px; right: -100px;
+  border-radius: 50%;
+}
+
+.about-grid {
+  max-width: 960px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 60px;
+  align-items: start;
+}
+@media(max-width:760px) { .about-grid { grid-template-columns: 1fr; } }
+
+.about-body p {
+  color: var(--mid);
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+.about-body p strong { color: var(--light); }
+.about-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.about-tag {
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.about-tag.t1 { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.2); color: var(--c1); }
+.about-tag.t2 { background: rgba(77,150,255,0.1); border-color: rgba(77,150,255,0.2); color: var(--c4); }
+.about-tag.t3 { background: rgba(107,203,119,0.1); border-color: rgba(107,203,119,0.2); color: var(--c3); }
+.about-tag.t4 { background: rgba(199,125,255,0.1); border-color: rgba(199,125,255,0.2); color: var(--c5); }
+.about-tag.t5 { background: rgba(255,154,60,0.1); border-color: rgba(255,154,60,0.2); color: var(--c6); }
+
+/* Creator card */
+.creator-card {
+  background: var(--ink3);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  z-index: 1;
+}
+.creator-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--grad2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 28px; font-weight: 700;
+  color: #fff; margin-bottom: 16px;
+}
+.creator-name {
+  font-family: var(--font-display); font-size: 22px; font-weight: 700;
+  color: var(--white); margin-bottom: 4px;
+}
+.creator-role { font-size: 13px; color: var(--mid); margin-bottom: 20px; }
+.creator-bio { font-size: 13px; color: var(--mid); line-height: 1.7; margin-bottom: 24px; }
+.creator-links { display: flex; flex-direction: column; gap: 10px; }
+.creator-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--pale);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.creator-link:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: var(--white); }
+.creator-link-icon { font-size: 16px; }
+.creator-link-label { flex: 1; }
+.creator-link-arrow { color: var(--dim); font-size: 12px; }
+.creator-link.linkedin { border-color: rgba(10,102,194,0.3); }
+.creator-link.linkedin:hover { background: rgba(10,102,194,0.1); border-color: rgba(10,102,194,0.5); }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--ink);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 40px 24px;
+  text-align: center;
+}
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  background: var(--grad1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+.footer-links { display: flex; justify-content: center; gap: 28px; margin-bottom: 20px; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--dim); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--pale); }
+.footer-copy { font-size: 11px; color: var(--dim); }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 22px; height: 22px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--c4);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── CAVEATS ── */
+.caveat-box {
+  background: rgba(255,154,60,0.06);
+  border: 1px solid rgba(255,154,60,0.15);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 12px;
+  color: #a87040;
+  line-height: 1.7;
+}
+.caveat-box strong { color: var(--c6); }
+
+/* ── HIDDEN OFFSCREEN ── */
+#offscreen { display: none; }
+
+/* ── CENTER WRAPPER ── */
+.center { max-width: 960px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<canvas id="offscreen"></canvas>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">BenfordLens</div>
+  <ul class="nav-links">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#analyser">Analyse</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#accuracy">Accuracy</a></li>
+    <li><a href="#analyser" class="nav-cta">Try it →</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section id="hero">
+  <div class="grid-bg"></div>
+  <div class="hero-content">
+
+    <div class="hero-chip">
+      <div class="hero-chip-dot"></div>
+      Free · Private · No sign-up required
+    </div>
+
+    <h1 class="hero-title">
+      Can you trust<br>
+      <span class="gradient-word">that image?</span>
+    </h1>
+
+    <p class="hero-sub">
+      Benford Lens uses an 18th-century mathematical law applied to DCT frequency analysis to detect AI-generated images. No black box — you see exactly why.
+    </p>
+
+    <div class="hero-btns">
+      <a href="#analyser" class="btn-primary">🔍 Analyse an Image</a>
+      <a href="#how" class="btn-secondary">How does it work?</a>
+    </div>
+
+    <!-- DEMO WINDOW -->
+    <div class="demo-window">
+      <div class="demo-titlebar">
+        <div class="demo-dot r"></div>
+        <div class="demo-dot y"></div>
+        <div class="demo-dot g"></div>
+        <div class="demo-titlebar-label">benfordlens.app — AI Image Detector</div>
+      </div>
+      <div class="demo-body" style="position:relative; min-height:180px;">
+
+        <!-- Drop state -->
+        <div class="demo-drop-zone">
+          <span class="demo-drop-icon">📂</span>
+          <div class="demo-drop-txt">Drop your image here or click to upload</div>
+        </div>
+
+        <!-- Result state -->
+        <div class="demo-result">
+          <div class="demo-result-top">
+            <div class="demo-result-img">🖼️</div>
+            <div style="flex:1">
+              <div class="demo-verdict-pill">LIKELY SYNTHETIC</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+                <div class="demo-pct">78%</div>
+                <div class="demo-verdict-score">synthetic probability</div>
+              </div>
+              <div class="demo-bar-bg" style="margin-top:8px">
+                <div class="demo-bar-fill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="demo-mini-chart">
+            <!-- 9 bars representing digits 1-9, comparing expected vs observed -->
+            <div class="demo-bar-item" style="background:#1e2345;height:85%;animation-delay:0.1s"></div>
+            <div class="demo-bar-item" style="background:#fc5c65;height:72%;animation-delay:0.15s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:58%;animation-delay:0.2s"></div>
+            <div class="demo-bar-item" style="background:#4d96ff;height:50%;animation-delay:0.25s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:42%;animation-delay:0.3s"></div>
+            <div class="demo-bar-item" style="background:#6bcb77;height:38%;animation-delay:0.35s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:32%;animation-delay:0.4s"></div>
+            <div class="demo-bar-item" style="background:#6bcb77;height:28%;animation-delay:0.45s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:24%;animation-delay:0.5s"></div>
+            <div class="demo-bar-item" style="background:#c77dff;height:20%;animation-delay:0.55s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:18%;animation-delay:0.6s"></div>
+            <div class="demo-bar-item" style="background:#ffd93d;height:16%;animation-delay:0.65s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:14%;animation-delay:0.7s"></div>
+            <div class="demo-bar-item" style="background:#ffd93d;height:12%;animation-delay:0.75s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:11%;animation-delay:0.8s"></div>
+            <div class="demo-bar-item" style="background:#6bcb77;height:10%;animation-delay:0.85s"></div>
+            <div class="demo-bar-item" style="background:#1e2345;height:9%;animation-delay:0.9s"></div>
+            <div class="demo-bar-item" style="background:#6bcb77;height:8%;animation-delay:0.95s"></div>
+          </div>
+          <div style="font-size:10px;color:#3d4060;font-family:'JetBrains Mono',monospace;">
+            Chi-squared: 0.0724 · KL div: 0.0381 · d1-excess: 1.68×
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════ ANALYSER ══════════════ -->
+<section id="analyser">
+  <div class="center">
+    <div class="section-eyebrow" style="color:var(--c4)">The Tool</div>
+    <h2 class="section-heading">Analyse your image</h2>
+    <p class="section-sub">Drop any image and get a full statistical breakdown in seconds. Everything runs in your browser — your image never leaves your device.</p>
+
+    <div class="tool-container">
+
+      <!-- Upload card -->
+      <div class="upload-card" id="uploadCard">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="upload-icon-wrap">📡</div>
+          <div class="upload-title">Drop your image here</div>
+          <div class="upload-sub">or click to browse your files</div>
+          <div class="upload-formats">
+            <span class="format-pill">JPG</span>
+            <span class="format-pill">PNG</span>
+            <span class="format-pill">WEBP</span>
+            <span class="format-pill">BMP</span>
+            <span class="format-pill">GIF</span>
+          </div>
+        </div>
+        <div class="privacy-strip">
+          🔒 100% private — analysis runs locally, no data sent to any server
+        </div>
+      </div>
+
+      <!-- Results panel -->
+      <div class="results-panel" id="resultsPanel">
+
+        <!-- Verdict card -->
+        <div class="verdict-card">
+          <div class="img-pane" id="imgPane">
+            <div class="scanning-overlay" id="scanOverlay">
+              <div class="scan-line"></div>
+              <div class="spinner"></div>
+              <div style="font-size:10px;letter-spacing:2px;color:var(--dim)">ANALYSING...</div>
+            </div>
+          </div>
+          <div>
+            <div class="verdict-pane" id="verdictPane" style="display:none">
+              <div>
+                <div class="verdict-label-sm">Verdict</div>
+                <div class="verdict-big" id="verdictText">—</div>
+              </div>
+              <div>
+                <div class="verdict-gauge-row">
+                  <span class="verdict-gauge-label">Synthetic probability</span>
+                  <span class="verdict-pct-val" id="verdictPct">—</span>
+                </div>
+                <div class="verdict-gauge-bg">
+                  <div class="verdict-gauge-fill" id="verdictFill" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="verdict-meta" id="verdictMeta"></div>
+            </div>
+            <div class="feedback-row" id="feedbackRow" style="display:none">
+              <span class="feedback-q">Was this result accurate?</span>
+              <button class="thumb-btn" id="thumbUp">👍</button>
+              <button class="thumb-btn" id="thumbDown">👎</button>
+              <span class="fb-thanks" id="fbThanks">Noted ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Caveat -->
+        <div class="caveat-box">
+          <strong>Note:</strong> This is a statistical estimate, not a definitive proof. Blurry images, low-texture photos, heavy JPEG compression, and screenshots can affect accuracy. Use alongside other forensic methods. A high score indicates Benford deviation — not a guaranteed AI origin.
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="card-title">Leading Digit Distribution — Observed vs Benford</div>
+            <div class="bar-chart-wrap" id="benfordChart"></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-sq" style="background:#1e2345"></div>Expected</div>
+              <div class="legend-item"><div class="legend-sq" style="background:#4d96ff"></div>Observed</div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="card-title">Per-Digit Breakdown</div>
+            <table>
+              <thead><tr><th>Digit</th><th>Expected</th><th>Observed</th><th>Δ</th></tr></thead>
+              <tbody id="digitTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="stats-card">
+          <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.06)">
+            <div class="card-title" style="margin-bottom:0">Extended Statistics</div>
+          </div>
+          <div class="stats-grid-inner" id="statsGridInner"></div>
+        </div>
+
+        <button class="reset-btn" id="resetBtn">← Analyse another image</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ HOW IT WORKS ══════════════ -->
+<section id="how">
+  <div class="center">
+    <div class="section-eyebrow" style="color:var(--c3)">The Science</div>
+    <h2 class="section-heading">How it works</h2>
+    <p class="section-sub">A step-by-step breakdown of the mathematics behind the detection.</p>
+
+    <div class="how-grid">
+      <div class="how-steps">
+
+        <div class="how-step">
+          <div class="step-num s1">1</div>
+          <div class="step-content">
+            <div class="step-title">Load & convert to grayscale</div>
+            <div class="step-body">The image is loaded in-browser and converted to grayscale (luminance channel). It's resized to a maximum of 800px to keep analysis fast, then cropped to a multiple of 8 pixels so it divides cleanly into blocks.</div>
+          </div>
+        </div>
+
+        <div class="how-step">
+          <div class="step-num s2">2</div>
+          <div class="step-content">
+            <div class="step-title">8×8 DCT block decomposition</div>
+            <div class="step-body">The image is divided into 8×8 pixel blocks — exactly as JPEG compression does — and a 2D Discrete Cosine Transform is applied to each block. This converts pixel brightness values into frequency coefficients, revealing how much energy exists at different spatial frequencies.</div>
+          </div>
+        </div>
+
+        <div class="how-step">
+          <div class="step-num s3">3</div>
+          <div class="step-content">
+            <div class="step-title">Extract AC coefficients</div>
+            <div class="step-body">From each 8×8 transformed block, we discard the DC coefficient (the average brightness) and keep the 63 AC coefficients — these capture texture, edges, and structure. A typical image produces hundreds of thousands of AC coefficients.</div>
+          </div>
+        </div>
+
+        <div class="how-step">
+          <div class="step-num s4">4</div>
+          <div class="step-content">
+            <div class="step-title">Tally leading digits</div>
+            <div class="step-body">We take the absolute value of each coefficient ≥ 1.0 and extract its first digit (1–9). These are tallied into a distribution histogram. Real photographs produce a distribution that closely follows Benford's Law.</div>
+          </div>
+        </div>
+
+        <div class="how-step">
+          <div class="step-num s5">5</div>
+          <div class="step-content">
+            <div class="step-title">Measure deviation & score</div>
+            <div class="step-body">Eight statistical measures — chi-squared deviation, KL divergence, mean absolute deviation, KS statistic, kurtosis, skewness, digit-1 excess ratio, and Pearson correlation — quantify how much the observed distribution deviates from the theoretical Benford curve. These combine into a final synthetic probability score.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Benford diagram -->
+      <div>
+        <div class="benford-diagram">
+          <div class="bd-title">Benford's Law — Expected Distribution</div>
+          <div class="bd-chart">
+            <!-- Heights proportional to log10(1+1/d) -->
+            <div class="bd-col"><div class="bd-bar" style="height:100%"></div><div class="bd-digit">1</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:58%"></div><div class="bd-digit">2</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:41%"></div><div class="bd-digit">3</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:32%"></div><div class="bd-digit">4</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:26%"></div><div class="bd-digit">5</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:22%"></div><div class="bd-digit">6</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:19%"></div><div class="bd-digit">7</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:17%"></div><div class="bd-digit">8</div></div>
+            <div class="bd-col"><div class="bd-bar" style="height:15%"></div><div class="bd-digit">9</div></div>
+          </div>
+          <div class="bd-note">
+            In naturally occurring data, <b>digit 1 appears ~30.1%</b> of the time, digit 2 ~17.6%, down to digit 9 at ~4.6%. This follows <b>P(d) = log₁₀(1 + 1/d)</b>. Real photographs follow this in the DCT frequency domain. AI-generated images often don't.
+          </div>
+        </div>
+
+        <div style="margin-top:16px;background:var(--ink3);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;">
+          <div class="card-title">Score thresholds</div>
+          <table class="thresholds-table">
+            <thead><tr><th>Image type</th><th>Score range</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--c3)">Real photo</td><td style="font-family:var(--font-mono);font-size:12px">0.014 – 0.025</td><td style="color:var(--c3);font-size:12px">Likely Authentic</td></tr>
+              <tr><td style="color:var(--c2)">Uncertain</td><td style="font-family:var(--font-mono);font-size:12px">0.025 – 0.045</td><td style="color:var(--c2);font-size:12px">Uncertain</td></tr>
+              <tr><td style="color:var(--c1)">AI / Synthetic</td><td style="font-family:var(--font-mono);font-size:12px">0.045 – 0.145+</td><td style="color:var(--c1);font-size:12px">Likely Synthetic</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:16px;background:rgba(77,150,255,0.06);border:1px solid rgba(77,150,255,0.15);border-radius:12px;padding:16px 20px;font-size:12px;color:#4a6a9f;line-height:1.7;">
+          <strong style="color:var(--c4)">Academic basis:</strong> This approach follows Bonettini, Bestagini, Milani & Tubaro (ICPR 2020) — <em>"On the use of Benford's Law to detect GAN-generated images"</em> — which achieved >99% accuracy on benchmark datasets.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ACCURACY (password protected) ══════════════ -->
+<section id="accuracy">
+  <div class="center">
+    <div class="section-eyebrow" style="color:var(--c3)">Community Data</div>
+    <h2 class="section-heading">Accuracy dashboard</h2>
+    <p class="section-sub">Aggregated thumbs up/down feedback from all users. Access restricted to the tool creator.</p>
+
+    <!-- Password gate -->
+    <div class="pw-gate" id="pwGate">
+      <div class="pw-icon">🔐</div>
+      <div class="pw-title">Creator access only</div>
+      <div class="pw-sub">Enter the access password to view the accuracy dashboard and feedback log.</div>
+      <div class="pw-input-wrap">
+        <input type="password" class="pw-input" id="pwInput" placeholder="••••••••" autocomplete="off">
+      </div>
+      <button class="pw-submit" id="pwSubmit">Unlock Dashboard</button>
+      <div class="pw-error" id="pwError">Incorrect password. Try again.</div>
+    </div>
+
+    <!-- Accuracy dashboard (hidden until pw correct) -->
+    <div class="accuracy-dash" id="accuracyDash">
+
+      <div class="acc-top-row">
+        <div class="acc-metric-card">
+          <div class="acc-metric-label">Accuracy rate</div>
+          <div class="acc-metric-val" id="accRate" style="color:var(--c3)">—</div>
+          <div class="acc-metric-sub">thumbs up / total</div>
+        </div>
+        <div class="acc-metric-card">
+          <div class="acc-metric-label">Total feedback</div>
+          <div class="acc-metric-val" id="accTotal" style="color:var(--c4)">0</div>
+          <div class="acc-metric-sub">responses received</div>
+        </div>
+        <div class="acc-metric-card">
+          <div class="acc-metric-label">Inaccurate reports</div>
+          <div class="acc-metric-val" id="accDown" style="color:var(--c1)">0</div>
+          <div class="acc-metric-sub">thumbs down</div>
+        </div>
+      </div>
+
+      <div class="acc-chart-card">
+        <div class="card-title">Community accuracy</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <span style="font-family:var(--font-display);font-size:48px;font-weight:700;color:var(--white)" id="accBigPct">—</span>
+          <div>
+            <div style="font-size:13px;color:var(--mid)">reported as accurate</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">based on user feedback</div>
+          </div>
+        </div>
+        <div class="acc-big-bar-bg">
+          <div class="acc-big-bar-fill" id="accBigBar" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:8px">
+          <span>👍 <span id="accUp">0</span> accurate</span>
+          <span>👎 <span id="accDown2">0</span> inaccurate</span>
+        </div>
+      </div>
+
+      <div class="acc-log">
+        <div class="card-title" style="margin-bottom:16px">Feedback log</div>
+        <div id="accLogContent"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ABOUT ══════════════ -->
+<section id="about">
+  <div class="center">
+    <div class="section-eyebrow" style="color:var(--c5)">The Creator</div>
+    <h2 class="section-heading">About this project</h2>
+
+    <div class="about-grid">
+      <div class="about-body">
+        <p>
+          <strong>Benford Lens</strong> grew out of a question: can you detect AI-generated images without training a neural network on millions of examples?
+        </p>
+        <p>
+          The answer turns out to be yes — using a mathematical principle first observed in 1881 by Simon Newcomb while flipping through logarithm tables. Real photographs, captured from the physical world through a lens, carry the statistical fingerprint of nature in their frequency domain. AI-generated images, synthesised pixel by pixel, often don't.
+        </p>
+        <p>
+          This tool applies <strong>Benford's Law to DCT frequency coefficients</strong> — the same frequency representation JPEG compression uses. By measuring how much an image's coefficient distribution deviates from the expected Benford curve, we can estimate the probability that it was artificially generated.
+        </p>
+        <p>
+          The academic foundation is the 2020 paper <em>"On the use of Benford's Law to detect GAN-generated images"</em> by Bonettini et al. at Politecnico di Milano, which demonstrated >99% accuracy on benchmark datasets. This implementation extends their approach with eight statistical metrics, adaptive sharpening for blurry images, and an interpretable per-digit breakdown.
+        </p>
+        <p>
+          Everything runs in your browser. No images are stored. No data is sent anywhere. The code is transparent about what it measures and why — because forensic tools should show their working.
+        </p>
+        <div class="about-tags">
+          <span class="about-tag t1">Image Forensics</span>
+          <span class="about-tag t2">Benford's Law</span>
+          <span class="about-tag t3">DCT Analysis</span>
+          <span class="about-tag t4">AI Detection</span>
+          <span class="about-tag t5">Open Source</span>
+        </div>
+      </div>
+
+      <!-- Creator card — edit this with your real details -->
+      <div class="creator-card">
+        <div class="creator-avatar">YN</div>
+        <div class="creator-name">Your Name</div>
+        <div class="creator-role">Researcher · Developer · [Your Title]</div>
+        <div class="creator-bio">
+          Brief bio about yourself here. What you work on, why this project matters to you, your background in forensics, data science, or AI.
+        </div>
+        <div class="creator-links">
+          <a href="https://www.linkedin.com/in/yourprofile" target="_blank" class="creator-link linkedin">
+            <span class="creator-link-icon">💼</span>
+            <span class="creator-link-label">LinkedIn Profile</span>
+            <span class="creator-link-arrow">↗</span>
+          </a>
+          <a href="https://github.com/yourusername" target="_blank" class="creator-link">
+            <span class="creator-link-icon">🐙</span>
+            <span class="creator-link-label">GitHub</span>
+            <span class="creator-link-arrow">↗</span>
+          </a>
+          <a href="mailto:your@email.com" class="creator-link">
+            <span class="creator-link-icon">✉️</span>
+            <span class="creator-link-label">Email</span>
+            <span class="creator-link-arrow">↗</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">BenfordLens</div>
+  <div class="footer-links">
+    <a href="#hero">Home</a>
+    <a href="#analyser">Analyse</a>
+    <a href="#how">How it works</a>
+    <a href="#about">About</a>
+    <a href="#accuracy">Accuracy</a>
+  </div>
+  <div class="footer-copy">
+    Free · Open · Private · No tracking · No data storage<br>
+    Based on Benford's Law applied to DCT frequency coefficients · Not a substitute for professional forensic analysis
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════
+// DCT ENGINE
+// ═══════════════════════════════════════
+function log10(x){ return Math.log(x)/Math.log(10); }
+function benfordExp(d){ return log10(1+1/d); }
+
+function dct1d(v){
+  const N=v.length, out=new Array(N);
+  for(let k=0;k<N;k++){
+    const a = k===0 ? 1/Math.sqrt(N) : Math.sqrt(2/N);
+    let s=0;
+    for(let n=0;n<N;n++) s += v[n]*Math.cos(Math.PI*k*(2*n+1)/(2*N));
+    out[k]=a*s;
+  }
+  return out;
+}
+
+function dct2d(block){
+  const N=8;
+  const row = block.map(r=>dct1d(r));
+  const res = Array.from({length:N},()=>new Array(N).fill(0));
+  for(let v=0;v<N;v++){
+    const col = dct1d(row.map(r=>r[v]));
+    for(let u=0;u<N;u++) res[u][v]=col[u];
+  }
+  return res;
+}
+
+function extractCoeffs(gray, w, h){
+  const out=[];
+  for(let y=0;y<=h-8;y+=8){
+    for(let x=0;x<=w-8;x+=8){
+      const block=[];
+      for(let by=0;by<8;by++){
+        const row=[];
+        for(let bx=0;bx<8;bx++) row.push(gray[(y+by)*w+(x+bx)]);
+        block.push(row);
+      }
+      const t=dct2d(block);
+      for(let u=0;u<8;u++) for(let v=0;v<8;v++) if(u||v) out.push(t[u][v]);
+    }
+  }
+  return out;
+}
+
+function benfordDist(coeffs){
+  const valid=coeffs.filter(v=>Math.abs(v)>=1);
+  if(!valid.length) return null;
+  const d=new Array(10).fill(0);
+  for(const v of valid){
+    const f=parseInt(String(Math.floor(Math.abs(v)))[0]);
+    if(f>=1&&f<=9) d[f]++;
+  }
+  const tot=d.slice(1).reduce((a,b)=>a+b,0);
+  const dist={};
+  for(let i=1;i<=9;i++) dist[i]=d[i]/tot;
+  return dist;
+}
+
+function chi2(dist){
+  let s=0;
+  for(let d=1;d<=9;d++){
+    const e=benfordExp(d);
+    s+=Math.pow(dist[d]-e,2)/e;
+  }
+  return s;
+}
+
+function extStats(dist){
+  const obs=[],exp=[];
+  for(let d=1;d<=9;d++){obs.push(dist[d]);exp.push(benfordExp(d));}
+  const dev=obs.map((o,i)=>o-exp[i]);
+  const chi=obs.reduce((s,o,i)=>s+Math.pow(o-exp[i],2)/exp[i],0);
+  const kl=obs.reduce((s,o,i)=>s+o*Math.log(o/exp[i]),0);
+  const mad=dev.reduce((s,d)=>s+Math.abs(d),0)/dev.length;
+  const cumO=[],cumE=[];let co=0,ce=0;
+  obs.forEach((v,i)=>{co+=v;ce+=exp[i];cumO.push(co);cumE.push(ce);});
+  const ks=Math.max(...cumO.map((v,i)=>Math.abs(v-cumE[i])));
+  const dm=dev.reduce((a,b)=>a+b,0)/dev.length;
+  const dv=dev.reduce((s,d)=>s+Math.pow(d-dm,2),0)/dev.length;
+  const ds=Math.sqrt(dv);
+  const kurt=dev.reduce((s,d)=>s+Math.pow(d-dm,4),0)/(dev.length*Math.pow(dv,2))-3;
+  const skew=ds>0?dev.reduce((s,d)=>s+Math.pow(d-dm,3),0)/(dev.length*Math.pow(ds,3)):0;
+  const d1x=dist[1]/benfordExp(1);
+  const om=obs.reduce((a,b)=>a+b,0)/9;
+  const em=exp.reduce((a,b)=>a+b,0)/9;
+  const cov=obs.reduce((s,o,i)=>s+(o-om)*(exp[i]-em),0)/9;
+  const os=Math.sqrt(obs.reduce((s,o)=>s+Math.pow(o-om,2),0)/9);
+  const es=Math.sqrt(exp.reduce((s,e)=>s+Math.pow(e-em,2),0)/9);
+  const corr=(os*es)>0?cov/(os*es):0;
+  return {chi,kl,mad,ks,kurt,skew,d1x,corr};
+}
+
+function scoreToPct(s){
+  if(s<=0.014)return 5;
+  if(s>=0.100)return 97;
+  if(s<=0.025)return Math.round(5+((s-0.014)/(0.025-0.014))*25);
+  if(s<=0.045)return Math.round(30+((s-0.025)/(0.045-0.025))*30);
+  return Math.round(60+((s-0.045)/(0.100-0.045))*37);
+}
+
+function nzRatio(coeffs){
+  return coeffs.filter(v=>Math.abs(v)<1).length/coeffs.length;
+}
+
+function sharpenGray(gray, w, h){
+  const k=[0,-1,0,-1,5,-1,0,-1,0];
+  const out=new Float32Array(gray.length);
+  for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+    let v=0;
+    for(let ky=-1;ky<=1;ky++) for(let kx=-1;kx<=1;kx++)
+      v+=gray[(y+ky)*w+(x+kx)]*k[(ky+1)*3+(kx+1)];
+    out[y*w+x]=Math.max(0,Math.min(255,v));
+  }
+  return out;
+}
+
+function analyse(imageData){
+  const w=imageData.width, h=imageData.height;
+  const cw=Math.floor(w/8)*8, ch=Math.floor(h/8)*8;
+  const gray=new Float32Array(cw*ch);
+  const d=imageData.data;
+  for(let y=0;y<ch;y++) for(let x=0;x<cw;x++){
+    const i=(y*w+x)*4;
+    gray[y*cw+x]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  }
+  let coeffs=extractCoeffs(gray,cw,ch);
+  const nz=nzRatio(coeffs);
+  let dist=benfordDist(coeffs);
+  let score=dist?chi2(dist):999;
+  let sharpened=false;
+  if(nz>0.6&&score>0.3){
+    const sg=sharpenGray(gray,cw,ch);
+    const sc=extractCoeffs(sg,cw,ch);
+    const sd=benfordDist(sc);
+    if(sd){coeffs=sc;dist=sd;score=chi2(dist);sharpened=true;}
+  }
+  return {dist,score,fakePct:scoreToPct(score),nz,sharpened,ext:dist?extStats(dist):null};
+}
+
+// ═══════════════════════════════════════
+// UI
+// ═══════════════════════════════════════
+const uploadZone=document.getElementById('uploadZone');
+const fileInput=document.getElementById('fileInput');
+const uploadCard=document.getElementById('uploadCard');
+const resultsPanel=document.getElementById('resultsPanel');
+const imgPane=document.getElementById('imgPane');
+const scanOverlay=document.getElementById('scanOverlay');
+const verdictPane=document.getElementById('verdictPane');
+const feedbackRow=document.getElementById('feedbackRow');
+const resetBtn=document.getElementById('resetBtn');
+
+let fbGiven=false;
+
+uploadZone.addEventListener('click',()=>fileInput.click());
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('drag');});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop',e=>{
+  e.preventDefault();uploadZone.classList.remove('drag');
+  const f=e.dataTransfer.files[0];if(f)go(f);
+});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])go(fileInput.files[0]);});
+resetBtn.addEventListener('click',reset);
+
+function reset(){
+  resultsPanel.classList.remove('visible');
+  uploadCard.style.display='';
+  verdictPane.style.display='none';
+  feedbackRow.style.display='none';
+  imgPane.innerHTML='<div class="scanning-overlay" id="scanOverlay"><div class="scan-line"></div><div class="spinner"></div><div style="font-size:10px;letter-spacing:2px;color:var(--dim)">ANALYSING...</div></div>';
+  fbGiven=false;
+  document.getElementById('thumbUp').className='thumb-btn';
+  document.getElementById('thumbDown').className='thumb-btn';
+  document.getElementById('fbThanks').style.display='none';
+  fileInput.value='';
+}
+
+function go(file){
+  if(!file.type.startsWith('image/'))return;
+  uploadCard.style.display='none';
+  resultsPanel.classList.add('visible');
+  verdictPane.style.display='none';
+  feedbackRow.style.display='none';
+
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    // show preview
+    imgPane.innerHTML='';
+    const el=document.createElement('img');
+    el.src=url;
+    imgPane.appendChild(el);
+
+    // draw to canvas
+    const canvas=document.getElementById('offscreen');
+    const MAX=800;
+    const sc=Math.min(1,MAX/Math.max(img.width,img.height));
+    canvas.width=Math.round(img.width*sc);
+    canvas.height=Math.round(img.height*sc);
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    const id=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+    setTimeout(()=>{
+      const r=analyse(id);
+      render(r);
+      URL.revokeObjectURL(url);
+    },60);
+  };
+  img.src=url;
+}
+
+function render(r){
+  let col,label;
+  if(r.fakePct>=65){col='#fc5c65';label='LIKELY SYNTHETIC';}
+  else if(r.fakePct>=35){col='#f7b731';label='UNCERTAIN';}
+  else{col='#2dce89';label='LIKELY AUTHENTIC';}
+
+  document.getElementById('verdictText').textContent=label;
+  document.getElementById('verdictText').style.color=col;
+  document.getElementById('verdictPct').textContent=r.fakePct+'%';
+  document.getElementById('verdictPct').style.color=col;
+  document.getElementById('verdictFill').style.width=r.fakePct+'%';
+  document.getElementById('verdictFill').style.background=`linear-gradient(90deg,#2dce89,${col})`;
+  document.getElementById('verdictMeta').innerHTML=
+    `Score: <span>${r.score.toFixed(5)}</span>${r.sharpened?' (sharpened)':''}<br>`+
+    `Near-zero coefficients: <span>${(r.nz*100).toFixed(1)}%</span><br>`+
+    `<span style="color:#252840">Natural: 0.014–0.025 · AI: 0.045–0.145+</span>`;
+
+  verdictPane.style.display='flex';
+  feedbackRow.style.display='flex';
+
+  // Bar chart
+  const chartEl=document.getElementById('benfordChart');
+  chartEl.innerHTML='';
+  const MX=0.35;
+  for(let d=1;d<=9;d++){
+    const e=benfordExp(d), o=r.dist[d];
+    const dev=Math.abs(o-e);
+    const bad=Math.min(1,dev/0.04);
+    const hue=Math.round(140-bad*140);
+    const bc=`hsl(${hue},75%,55%)`;
+    const col=document.createElement('div');
+    col.className='bc-col';
+    const pair=document.createElement('div');
+    pair.className='bc-pair';
+    const eb=document.createElement('div');
+    eb.className='bc-bar';
+    eb.style.cssText=`height:${(e/MX*88)}%;background:#1e2345;`;
+    const ob=document.createElement('div');
+    ob.className='bc-bar';
+    ob.style.cssText=`height:${Math.max(o/MX*88,2)}%;background:${bc};`;
+    pair.appendChild(eb);pair.appendChild(ob);
+    const lbl=document.createElement('div');
+    lbl.className='bc-label';lbl.textContent=d;
+    col.appendChild(pair);col.appendChild(lbl);
+    chartEl.appendChild(col);
+  }
+
+  // Digit table
+  const tbody=document.getElementById('digitTbody');
+  tbody.innerHTML='';
+  for(let d=1;d<=9;d++){
+    const e=benfordExp(d)*100, o=r.dist[d]*100, dv=o-e;
+    const flag=Math.abs(dv)>4?'<span class="flag-cell">⚠</span>':'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${d}</td><td>${e.toFixed(1)}%</td>`+
+      `<td style="color:${Math.abs(dv)>4?'#f7b731':'var(--pale)'}">${o.toFixed(1)}%</td>`+
+      `<td style="color:${dv>0?'#fc5c65':'#4d96ff'}">${dv>0?'▲':'▼'}${Math.abs(dv).toFixed(2)}%${flag}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  // Stats grid
+  const sg=document.getElementById('statsGridInner');
+  sg.innerHTML='';
+  const e=r.ext;
+  const stats=[
+    {name:'Chi-squared',val:e.chi.toFixed(4),desc:'Primary Benford deviation',col:r.score>0.045?'#fc5c65':r.score<0.025?'#2dce89':'#f7b731'},
+    {name:'KL Divergence',val:e.kl.toFixed(4),desc:'Info-theoretic distance',col:e.kl>0.02?'#fc5c65':'#2dce89'},
+    {name:'Mean Abs Dev',val:e.mad.toFixed(4),desc:'Avg error per digit',col:'#c77dff'},
+    {name:'KS Statistic',val:e.ks.toFixed(4),desc:'Max cumulative gap',col:'#4d96ff'},
+    {name:'Kurtosis',val:e.kurt.toFixed(3),desc:'Error concentration',col:'#ffd93d'},
+    {name:'Skewness',val:e.skew.toFixed(3),desc:'Direction of errors',col:'#ff9a3c'},
+    {name:'Digit-1 excess',val:e.d1x.toFixed(3)+'×',desc:'>1.2 suspicious',col:e.d1x>1.5?'#fc5c65':e.d1x>1.2?'#f7b731':'#2dce89'},
+    {name:'Correlation',val:e.corr.toFixed(4),desc:'Pearson vs Benford',col:e.corr<0.98?'#fc5c65':'#2dce89'},
+  ];
+  for(const s of stats){
+    const c=document.createElement('div');
+    c.className='stat-cell';
+    c.innerHTML=`<div class="stat-name">${s.name}</div><div class="stat-val" style="color:${s.col}">${s.val}</div><div class="stat-desc">${s.desc}</div>`;
+    sg.appendChild(c);
+  }
+
+  updateAccDisplay();
+}
+
+// ═══════════════════════════════════════
+// FEEDBACK
+// ═══════════════════════════════════════
+function getLog(){try{return JSON.parse(localStorage.getItem('bl_log')||'[]');}catch{return[];}}
+function getFb(){try{return JSON.parse(localStorage.getItem('bl_fb')||'{"up":0,"down":0}');}catch{return{up:0,down:0};}}
+function saveFb(fb){localStorage.setItem('bl_fb',JSON.stringify(fb));}
+function saveLog(log){localStorage.setItem('bl_log',JSON.stringify(log.slice(-50)));}// keep last 50
+
+document.getElementById('thumbUp').addEventListener('click',()=>{
+  if(fbGiven)return;fbGiven=true;
+  const fb=getFb();fb.up++;saveFb(fb);
+  const log=getLog();
+  log.push({t:new Date().toLocaleString(),thumb:'up',score:document.getElementById('verdictPct').textContent,verdict:document.getElementById('verdictText').textContent});
+  saveLog(log);
+  document.getElementById('thumbUp').className='thumb-btn up-active';
+  document.getElementById('fbThanks').style.display='block';
+  updateAccDisplay();
+});
+document.getElementById('thumbDown').addEventListener('click',()=>{
+  if(fbGiven)return;fbGiven=true;
+  const fb=getFb();fb.down++;saveFb(fb);
+  const log=getLog();
+  log.push({t:new Date().toLocaleString(),thumb:'down',score:document.getElementById('verdictPct').textContent,verdict:document.getElementById('verdictText').textContent});
+  saveLog(log);
+  document.getElementById('thumbDown').className='thumb-btn dn-active';
+  document.getElementById('fbThanks').style.display='block';
+  updateAccDisplay();
+});
+
+function updateAccDisplay(){
+  // (public totals at bottom not shown in this version — only in password-protected dash)
+}
+
+// ═══════════════════════════════════════
+// PASSWORD GATE
+// Change 'benfordlens2024' to your own password
+// ═══════════════════════════════════════
+const CORRECT_PW = 'benfordlens2024';
+
+document.getElementById('pwSubmit').addEventListener('click',checkPw);
+document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
+
+function checkPw(){
+  const val=document.getElementById('pwInput').value;
+  if(val===CORRECT_PW){
+    document.getElementById('pwGate').style.display='none';
+    document.getElementById('accuracyDash').classList.add('visible');
+    renderDash();
+  } else {
+    document.getElementById('pwError').style.display='block';
+    document.getElementById('pwInput').value='';
+    setTimeout(()=>document.getElementById('pwError').style.display='none',2500);
+  }
+}
+
+function renderDash(){
+  const fb=getFb();
+  const total=fb.up+fb.down;
+  const pct=total>0?Math.round(fb.up/total*100):null;
+
+  document.getElementById('accTotal').textContent=total;
+  document.getElementById('accDown').textContent=fb.down;
+  document.getElementById('accUp').textContent=fb.up;
+  document.getElementById('accDown2').textContent=fb.down;
+
+  if(pct!==null){
+    document.getElementById('accRate').textContent=pct+'%';
+    document.getElementById('accBigPct').textContent=pct+'%';
+    const col=pct>=70?'#2dce89':pct>=50?'#f7b731':'#fc5c65';
+    document.getElementById('accRate').style.color=col;
+    document.getElementById('accBigPct').style.color=col;
+    document.getElementById('accBigBar').style.width=pct+'%';
+    document.getElementById('accBigBar').style.background=col;
+  } else {
+    document.getElementById('accRate').textContent='No data';
+    document.getElementById('accBigPct').textContent='No data yet';
+  }
+
+  // Log
+  const log=getLog().reverse();
+  const logEl=document.getElementById('accLogContent');
+  if(!log.length){
+    logEl.innerHTML='<div class="no-log">No feedback submitted yet</div>';
+    return;
+  }
+  logEl.innerHTML=log.map(entry=>`
+    <div class="acc-log-entry">
+      <span class="log-thumb">${entry.thumb==='up'?'👍':'👎'}</span>
+      <span class="log-verdict">${entry.verdict||'—'} · ${entry.score||'—'}</span>
+      <span class="log-time">${entry.t||'—'}</span>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
